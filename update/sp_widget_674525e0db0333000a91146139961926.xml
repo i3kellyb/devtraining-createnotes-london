@@ -1,0 +1,415 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[function SpGroupMgmtController($location) {
+  var c = this;
+
+  c.runFilter = function () {
+    if (c.filterGroups) //My Memberships -> true
+      c.data.result_groups = c.data.groups.filter(function (el) {
+        return el.member == c.filterGroups;
+      });
+    else //My Groups -> false
+      c.data.result_groups = c.data.groups.filter(function (el) {
+        return el.manager == c.data.user_id;
+      });
+
+    // Additional filter per name
+    if (c.filterName && c.filterName.length > 0)
+      c.data.result_groups = c.data.result_groups.filter(function (el) {
+        var attrValue = el[c.filterAttribute.value];
+        if (attrValue)
+          return attrValue.toLowerCase().indexOf(c.filterName.toLowerCase()) != -1;
+        return false;
+      });
+    c.totalPageCount = 1;
+    c.totPages = Math.ceil(c.data.result_groups.length / c.options.limit);
+    c.checkPagination();
+    c.getRecPagCount();
+  };
+
+  c.selectFilter = function (value) {
+    c.filterGroups = value;
+    c.filterName = '';
+    c.currentPage = 1;
+    c.totalPageCount = 1;
+    c.runFilter();
+  };
+
+  c.$onInit = function () {
+    c.filterGroups = true;
+    c.filterName = '';
+    c.currentPage = 1;
+    c.totalPageCount = 0;
+    c.filterAttributes = [{
+        display: 'name',
+        value: 'name'
+      },
+      {
+        display: 'type',
+        value: 'type'
+      },
+      {
+        display: 'owner',
+        value: 'manager_dv'
+      }
+    ];
+    c.filterAttribute = c.filterAttributes[0];
+    c.isManager = false;
+    c.runFilter();
+  };
+
+  c.goToGroup = function (group) {
+    $location.search({
+      id: c.options.page_id,
+      sys_id: group.sys_id,
+      table: group.table_name,
+      view: c.options.view || 'default'
+    });
+  };
+
+  /* Pagination */
+  c.next = function () {
+    if (c.currentPage < c.totPages)
+      c.currentPage++;
+    c.checkPagination();
+    c.getRecPagCount();
+  };
+  c.previous = function () {
+    if (c.currentPage > 1)
+      c.currentPage--;
+    c.checkPagination();
+    c.getRecPagCount();
+  };
+  c.checkPagination = function () {
+    c.currentPage = parseInt(c.currentPage);
+    if (c.currentPage == 0)
+      c.currentPage = 1;
+    if (c.currentPage > c.totPages)
+      c.currentPage = c.totPages;
+    if (c.currentPage < 1)
+      c.currentPage = 1;
+
+    if (c.data.result_groups.length > 0)
+      c.totalPageCount = ((c.currentPage - 1) * c.options.limit) + 1;
+    else
+      c.totalPageCount = 0;
+  };
+  c.getRecPagCount = function () {
+    c.currentPageCount = 0;
+    if (c.data.result_groups.length == 0)
+      c.currentPageCount = 0;
+    else if (c.currentPage == 1 && c.currentPage != c.totPages)
+      c.currentPageCount = c.options.limit;
+    else if (c.currentPage < c.totPages)
+      c.currentPageCount = c.options.limit * c.currentPage;
+    else if (c.currentPage == c.totPages)
+      c.currentPageCount = (c.data.result_groups.length - (c.options.limit * (c.totPages - 1))) + c.options.limit * (c.totPages - 1);
+  };
+
+}]]></client_script>
+        <controller_as>c</controller_as>
+        <css>$x-pisn-sp-groupmn-heading-font-size: 12px !default;&#13;
+$x-pisn-sp-groupmn-heading-bg: #e6e8ea !default;&#13;
+$x-pisn-sp-groupmn-heading-btn-height: 30px !default;&#13;
+$x-pisn-sp-groupmn-heading-btn-group-height: calc($x-pisn-sp-groupmn-heading-btn-height - 6px) !default;&#13;
+$x-pisn-sp-groupmn-heading-btn-selected-bg: $brand-primary !default;&#13;
+$x-pisn-sp-groupmn-heading-btn-selected-color: #FFF !default;&#13;
+$x-pisn-sp-groupmn-row-min-height: 50px !default;&#13;
+$x-pisn-sp-groupmn-row-b: #e6e6e6 !default;&#13;
+$x-pisn-sp-groupmn-pag-control-enabled: $brand-primary !default;&#13;
+$x-pisn-sp-groupmn-pag-control-disabled: #babec2 !default;&#13;
+&#13;
+.x_pisn_sp_groupmn__heading {&#13;
+  background-color: $x-pisn-sp-groupmn-heading-bg;&#13;
+  display: flex;&#13;
+  align-items: center;&#13;
+  justify-content: space-between;&#13;
+  padding-left: 5px;&#13;
+  padding-right: 5px;&#13;
+}&#13;
+&#13;
+.x_pisn_sp_groupmn__nodata {&#13;
+  background-color: $x-pisn-sp-groupmn-heading-bg;&#13;
+  color: $text-muted;&#13;
+	font-size: 15px;&#13;
+	font-weight: 500;&#13;
+	letter-spacing: -0.46px;&#13;
+	line-height: 18px;&#13;
+  .fa {&#13;
+    color: $brand-success;&#13;
+  }&#13;
+}&#13;
+&#13;
+.x_pisn_sp_groupmn__btn-group {&#13;
+  background-color: white;&#13;
+  border-radius: $border-radius-base;&#13;
+  padding: 3px;&#13;
+}&#13;
+&#13;
+.x_pisn_sp_groupmn__header_btn {&#13;
+  border: 0;&#13;
+  height: $x-pisn-sp-groupmn-heading-btn-group-height;&#13;
+  line-height: calc($x-pisn-sp-groupmn-heading-btn-group-height / 2);&#13;
+}&#13;
+&#13;
+.x_pisn_sp_groupmn__header_btn, .x_pisn_sp_groupmn__search, .x_pisn_sp_groupmn__btn-dropdown button {&#13;
+  font-weight: 600;&#13;
+  letter-spacing: -0.17px;&#13;
+  font-size: $x-pisn-sp-groupmn-heading-font-size !important;&#13;
+}&#13;
+&#13;
+.x_pisn_sp_groupmn__header_btn--selected {&#13;
+  background-color: $x-pisn-sp-groupmn-heading-btn-selected-bg;&#13;
+  color: $x-pisn-sp-groupmn-heading-btn-selected-color;&#13;
+}&#13;
+&#13;
+.x_pisn_sp_groupmn__search {&#13;
+  width: 85px;&#13;
+  border: 0;&#13;
+  height: $x-pisn-sp-groupmn-heading-btn-height;&#13;
+  line-height: calc($x-pisn-sp-groupmn-heading-btn-height / 2);&#13;
+}&#13;
+&#13;
+.x_pisn_sp_groupmn__btn-dropdown {&#13;
+  .dropdown-toggle {&#13;
+    min-width: 140px;&#13;
+    height: $x-pisn-sp-groupmn-heading-btn-height;&#13;
+    line-height: calc($x-pisn-sp-groupmn-heading-btn-height / 2);&#13;
+    padding-right: 30px;&#13;
+    text-align: left;&#13;
+    padding-left: 18px;&#13;
+  }&#13;
+  .dropdown-toggle:hover, .dropdown-toggle:active, .open &gt; .dropdown-toggle {&#13;
+    background-color: $btn-default-bg;&#13;
+  }&#13;
+  .fa-caret-up, .fa-caret-down {&#13;
+    position: absolute;&#13;
+    right: 10px;&#13;
+    color: $panel-primary-heading-bg;&#13;
+  }&#13;
+  .fa-caret-up {&#13;
+    top: 10%;&#13;
+  }&#13;
+  .fa-caret-down {&#13;
+    bottom: 10%;&#13;
+  }&#13;
+  &#13;
+}&#13;
+&#13;
+.x_pisn_sp_groupmn__fa {&#13;
+  color: $panel-primary-heading-bg;&#13;
+  -webkit-text-stroke: 3px $panel-bg;&#13;
+  -webkit-font-smoothing: antialiased;&#13;
+}&#13;
+&#13;
+.x_pisn_sp_groupmn__row {&#13;
+  min-height: $x-pisn-sp-groupmn-row-min-height;&#13;
+  padding-top: 10px;&#13;
+  padding-bottom: 10px;&#13;
+  border-bottom: 0.5px solid $x-pisn-sp-groupmn-row-b;&#13;
+  overflow: hidden;&#13;
+&#13;
+  [class*='col-xs'] {&#13;
+    overflow: hidden;&#13;
+  }&#13;
+&#13;
+}&#13;
+&#13;
+.x_pisn_sp_groupmn__row:last-child {&#13;
+  border-bottom: 0;&#13;
+}&#13;
+&#13;
+.x_pisn_sp_groupmn__head-l,&#13;
+.x_pisn_sp_groupmn__head-r {&#13;
+  display: flex;&#13;
+  justify-content: center;&#13;
+  align-items: center;&#13;
+  position: relative;&#13;
+}&#13;
+&#13;
+.x_pisn_sp_groupmn__head-r {&#13;
+  input {&#13;
+    width: 60px;&#13;
+    height: $x-pisn-sp-groupmn-heading-btn-height;&#13;
+    line-height: calc($x-pisn-sp-groupmn-heading-btn-height / 2);&#13;
+  }&#13;
+&#13;
+  .fa {&#13;
+    color: $x-pisn-sp-groupmn-pag-control-disabled;&#13;
+  }&#13;
+  .fa-enabled {&#13;
+    color: $x-pisn-sp-groupmn-pag-control-enabled !important;&#13;
+  }&#13;
+  &#13;
+}&#13;
+&#13;
+.panel-heading {&#13;
+  display: flex;&#13;
+  align-items: center;&#13;
+  justify-content: space-between;&#13;
+  padding-top: 5px;&#13;
+  padding-bottom: 4px;&#13;
+  padding-right: 5px;&#13;
+}&#13;
+&#13;
+.pagnumber {&#13;
+  min-width: 15px;&#13;
+}</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>false</has_preview>
+        <id>group_management_testing</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {  }]]></link>
+        <name>Group Management Testing</name>
+        <option_schema>[{"name":"limit","section":"other","default_value":"5","label":"Limit","type":"integer"},{"name":"group_var","section":"other","default_value":"group","label":"Group variable","type":"string"},{"name":"user_variable","section":"other","default_value":"user","label":"User variable","type":"string"},{"displayValue":"Catalog Item","name":"join_cat_item","section":"other","default_value":"","label":"Join Catalog Item","type":"reference","value":"sc_cat_item","ed":{"reference":"sc_cat_item"}},{"displayValue":"Catalog Item","name":"leave_cat_item","section":"other","default_value":"","label":"Leave Catalog Item","type":"reference","value":"sc_cat_item","ed":{"reference":"sc_cat_item"}},{"hint":"The page providing the overview of the selected group.","name":"page_id","section":"other","default_value":"x_pisn_group_details","label":"Manage Group - Page ID","type":"string"},{"hint":"Message shown when the user doesn't belong or manage any groups.","name":"no_data_message","section":"other","default_value":"You are not a member of a group. Click ‘Join a New Group’ button to find relevant groups for your position.","label":"No Data Message","type":"string"},{"hint":"Make the link to the Group Overview page available or not to all employees (always available for Managers)","name":"view_group_details","section":"other","default_value":"false","label":"Allow members to view group detail","type":"boolean"},{"name":"user_param","section":"other","default_value":"sys_id","label":"User Parameter","type":"string"}]</option_schema>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function () {
+  input = input || {};
+	options.view_group_details = options.view_group_details == true || options.view_group_details == 'true';
+  options.user_param = options.user_param || 'sys_id';
+	
+  var sgmAPI = new SpGroupMgmtAPI();
+	var user = sgmAPI.getUser($sp.getParameter(options.user_param) || gs.getUserID());
+  data.user_id = user.sys_id;
+  data.user_name = user.name;
+  data.groups = sgmAPI.getGroups(data.user_id);
+	data.isManager = sgmAPI.isManager(data.groups, data.user_id);
+	
+	var showButtons = true;
+	var titles = {jn: 'Add to New Group', lv: 'Remove'};
+	
+	if (data.user_id === gs.getUserID()) {
+		titles = {jn: 'Join a New Group', lv: 'Leave'};
+	} else if (!sgmAPI.userHasRole(gs.getUserID(),'user_admin')) {
+		showButtons = false;
+	}
+	
+  data.widget_join_new = $sp.getWidget('x-pisn-sp-cil', {
+    title: gs.getMessage(titles.jn),
+    size: 'lg',
+    color: 'success',
+		class_name: 'btn-join',
+    cat_item: options.join_cat_item,
+		visible: showButtons,
+    var_data: [{
+      name: 'user',
+      value: data.user_id,
+      displayValue: data.user_name
+    }]
+  });
+  
+  for (var i = 0; i < data.groups.length; i++) {
+    data.groups[i].widget_leave = $sp.getWidget('x-pisn-sp-cil', {
+      title: gs.getMessage(titles.lv),
+      size: 'lg',
+      color: 'default',
+      class_name: 'btn-leave',
+      cat_item: options.leave_cat_item,
+      state: !data.groups[i].state_leave,
+			visible:showButtons, 
+      var_data: [{
+          name: 'user',
+          value: data.user_id,
+          displayValue: data.user_name
+        },
+        {
+          name: 'group',
+          value: data.groups[i].sys_id,
+          displayValue: data.groups[i].name
+        }
+      ]
+    });
+  }
+
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2019-07-31 14:35:14</sys_created_on>
+        <sys_id>674525e0db0333000a91146139961926</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Group Management Testing</sys_name>
+        <sys_package display_value="CreateNotes" source="x_snc_createnotes">df5fd9a5090232007f44e1046c8ff69f</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="CreateNotes">df5fd9a5090232007f44e1046c8ff69f</sys_scope>
+        <sys_update_name>sp_widget_674525e0db0333000a91146139961926</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2019-07-31 14:35:14</sys_updated_on>
+        <template><![CDATA[<div class="x_pisn_sp_groupmn">
+  <div class="panel panel-primary b">
+    <div class="panel-heading">
+      <h4 class="panel-title">${Groups}</h4>
+      <div>
+        <sp-widget widget="data.widget_join_new"></sp-widget>
+      </div>
+    </div>
+    <div class="m-t-xs x_pisn_sp_groupmn__heading form-inline">
+      <div class="x_pisn_sp_groupmn__head-l">
+        <div class="x_pisn_sp_groupmn__btn-group" ng-if="c.data.isManager">
+          <a class="btn btn-default x_pisn_sp_groupmn__header_btn" ng-class="{'x_pisn_sp_groupmn__header_btn--selected': c.filterGroups == true}"
+            ng-href="" role="button" ng-click="c.selectFilter(true)">${Memberships}</a>
+          <a class="btn btn-default x_pisn_sp_groupmn__header_btn" ng-class="{'x_pisn_sp_groupmn__header_btn--selected': c.filterGroups == false}"
+            ng-href="" role="button" ng-click="c.selectFilter(false)">${Groups}</a>
+        </div>
+        <input type="text" class="form-control x_pisn_sp_groupmn__search" ng-class="{'m-l-sm': c.data.isManager}"
+          placeholder="Search" ng-model="c.filterName" ng-change="c.runFilter()">
+
+        <div class="m-l-sm dropdown x_pisn_sp_groupmn__btn-dropdown">
+          <button class="btn btn-default dropdown-toggle no-border" type="button" data-toggle="dropdown"><span>${Filter
+              by:}</span> <span class="text-capitalize">{{c.filterAttribute.display}}</span></button>
+          <i class="fa fa-caret-up" aria-hidden="true" data-toggle="dropdown"></i>
+          <i class="fa fa-caret-down" aria-hidden="true" data-toggle="dropdown"></i>
+          <ul class="dropdown-menu">
+            <li ng-repeat="filter in ::c.filterAttributes"><a ng-href="" ng-click="c.filterAttribute = filter;c.runFilter()"
+                class="text-capitalize">{{::filter.display}}</a></li>
+          </ul>
+        </div>
+
+      </div>
+      <div class="x_pisn_sp_groupmn__head-r">
+        <i class="fa fa-caret-left fa-3x" ng-class="{'fa-enabled': c.totPages > 1}" aria-hidden="true" ng-click="c.previous()"></i>
+        <input type="text" class="form-control m-l-xs" placeholder="" ng-model="c.totalPageCount" ng-change="c.checkPagination()"
+          ng-disabled="c.data.result_groups.length <= c.options.limit"><span class="m-l-xs m-r-xs">to</span><span
+          class="pagnumber">{{c.currentPageCount}}</span><span class="m-r-xs">${of}</span><span class="pagnumber">{{c.data.result_groups.length}}</span>
+        <i class="fa fa-caret-right fa-3x m-l-xs" ng-class="{'fa-enabled': c.totPages > 1 && c.currentPage < c.totPages}"
+          aria-hidden="true" ng-click="c.next()"></i>
+      </div>
+    </div>
+
+    <div class="body">
+
+      <div class="wrapper x_pisn_sp_groupmn__nodata m-t-xs" ng-if="c.data.groups.length==0">
+        <i class="fa fa-info-circle m-r-sm" aria-hidden="true"></i> <span>{{c.options.no_data_message}}</span>
+      </div>
+
+      <div class="x_pisn_sp_groupmn__row" ng-repeat="group in c.data.result_groups | limitTo : c.options.limit : ( (c.currentPage - 1) * c.options.limit) track by group.sys_id">
+        <div class="col-xs-3">{{group.name}}</div>
+        <div class="col-xs-2">{{group.type}}</div>
+        <div class="col-xs-2">{{group.count_members}} <span ng-if="group.count_members<2">${Member}</span><span ng-if="group.count_members>1">${Members}</span></div>
+        <div class="col-xs-2">Owner: {{group.manager_dv}}</div>
+        <div class="col-xs-2 text-center" ng-class="{'col-xs-offset-1': !( (c.data.isManager && !c.filterGroups) || c.options.view_group_details) }">
+          <div ng-if="group.member == false">
+            <a class="btn btn-primary btn-join" ng-href="" ng-click="c.goToGroup(group)" role="button">${Manage}</a>
+          </div>
+          <div ng-if="group.member != false">
+            <sp-widget widget="group.widget_leave"></sp-widget>
+          </div>
+        </div>
+        <div class="col-xs-1 text-right" ng-if="(c.data.isManager && !c.filterGroups) || c.options.view_group_details">
+          <i class="fa fa-arrow-right fa-2x x_pisn_sp_groupmn__fa" aria-hidden="true" ng-click="c.goToGroup(group)">
+          </i>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>]]></template>
+    </sp_widget>
+</record_update>
